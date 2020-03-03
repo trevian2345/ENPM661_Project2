@@ -10,7 +10,6 @@ class ObstacleMap:
         self.image = np.zeros((self.height, self.width), dtype=np.uint8)
         self.generate_map()
         self.window_name = "Obstacle Map"
-        self.show()
 
     def show(self):
         cv2.imshow(self.window_name, self.image * 255)
