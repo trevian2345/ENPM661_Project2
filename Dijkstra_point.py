@@ -3,7 +3,7 @@ from math import *
 import numpy as np
 import cv2
 import sys
-
+import argparse
 
 class PointRobot:
     def __init__(self, start, goal):
@@ -89,4 +89,13 @@ class PointRobot:
 
 
 if __name__ == '__main__':
-    PointRobot(start=(190, 10), goal=(10, 290))
+    #PointRobot(start=(190, 10), goal=(10, 290))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('initial', help='Initial node of the robot')
+    parser.add_argument('goal', help='Goal node of the robot')
+    args = parser.parse_args()
+
+    start_pos = args.initial
+    goal_pos = args.goal
+    PointRobot(start_pos, goal_pos)
+    
