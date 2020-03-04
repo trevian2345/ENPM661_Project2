@@ -91,11 +91,17 @@ class PointRobot:
 if __name__ == '__main__':
     #PointRobot(start=(190, 10), goal=(10, 290))
     parser = argparse.ArgumentParser()
-    parser.add_argument('initial', help='Initial node of the robot')
-    parser.add_argument('goal', help='Goal node of the robot')
+    parser.add_argument('initialx',type=int, help='X-coordinate of Initial node of the robot')
+    parser.add_argument('initialy', type=int, help='Y-coordinate of Initial node of the robot')
+    parser.add_argument('goalx',type=int, help='X-coordinate of Goal node of the robot')
+    parser.add_argument('goaly', type=int, help='Y-coordinate of Goal node of the robot')
     args = parser.parse_args()
 
-    start_pos = args.initial
-    goal_pos = args.goal
-    PointRobot(start_pos, goal_pos)
+    sx = args.initialx
+    sy = args.initialy
+    gx = args.goalx
+    gy= args.goaly
+    start_pos = (sx,sy)
+    goal_pos = (gx, gy)
+    pointrob = PointRobot(start_pos, goal_pos)
     
