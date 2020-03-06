@@ -15,6 +15,7 @@ class ObstacleMap:
         self.thickness = distance
         self.baseImage = np.zeros((self.height, self.width), dtype=np.uint8)
         self.obstacleSpace = np.copy(self.baseImage)
+        self.clearanceSpace = np.copy(self.baseImage)
         self.window_name = "Image"
         self.generate_map()
 
@@ -43,5 +44,8 @@ class ObstacleMap:
                            for a in range(360)], dtype=np.int32).reshape((-1, 1, 2))
         shapes_to_draw.append(points)
         cv2.fillPoly(self.baseImage, shapes_to_draw, 1)
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.thickness, self.thickness))
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.thickness*2 + 1, self.thickness*2 + 1))
         self.obstacleSpace = cv2.dilate(np.copy(self.baseImage), kernel)
+        self.clearanceSpace = self.obstacleSpace - self.baseImage
+
+        # TODO: Map boundaries should be treated as walls
