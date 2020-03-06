@@ -45,7 +45,5 @@ class ObstacleMap:
         shapes_to_draw.append(points)
         cv2.fillPoly(self.baseImage, shapes_to_draw, 1)
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.thickness*2 + 1, self.thickness*2 + 1))
-        self.obstacleSpace = cv2.dilate(np.copy(self.baseImage), kernel)
+        self.obstacleSpace = cv2.dilate(np.copy(self.baseImage), kernel, borderType=cv2.BORDER_CONSTANT, borderValue=1)
         self.clearanceSpace = self.obstacleSpace - self.baseImage
-
-        # TODO: Map boundaries should be treated as walls
