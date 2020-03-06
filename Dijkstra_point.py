@@ -7,7 +7,7 @@ import argparse
 
 
 class PointRobot:
-    def __init__(self, start, goal):
+    def __init__(self, start, goal, radius=None, clearance=None):
         """
         Initialization of the point robot.
         :param start: starting coordinates for the point robot, in tuple form (y, x)
@@ -17,6 +17,11 @@ class PointRobot:
             map: Instance of the obstacle map to be navigated
             start: Same as init argument start
             goal: Same as init argument start
+            openList: List of coordinates pending exploration, in the form: [(y, x), cost, action]
+            openGrid: Matrix storing "1" for cells pending exploration, and "0" otherwise
+            closeGrid: Matrix storing "1" for cells that have been explored, and "0" otherwise
+            actionGrid: Matrix storing the optimal movement policy for cells that have been explored, and 255 otherwise
+            backTrack: User-friendly visualization of the optimal path
         """
         self.actions = [[0, 1, 1],
                         [-1, 1, sqrt(2)],
@@ -26,9 +31,11 @@ class PointRobot:
                         [1, -1, sqrt(2)],
                         [1, 0, 1],
                         [1, 1, sqrt(2)]]
-        self.map = ObstacleMap()  # Instance of the map object
         self.start = start  # Starting coordinates in tuple form
         self.goal = goal  # Goal coordinates in tuple form
+        self.radius = radius
+        self.clearance = clearance
+        self.map = ObstacleMap(radius + clearance)  # Instance of the map object
 
         # Check to see if start and goal cells lie within map boundaries
         if not (0 <= self.start[0] < self.map.height) or not (0 <= self.start[1] < self.map.width):
@@ -39,22 +46,25 @@ class PointRobot:
             exit(0)
 
         # Check to see if start and goal cells are in free spaces
-        elif self.map.image[self.start]:
+        elif self.map.obstacleSpace[self.start]:
             print("Start lies within obstacle space!")
             exit(0)
-        elif self.map.image[self.goal]:
+        elif self.map.obstacleSpace[self.goal]:
             print("Goal lies within obstacle space!")
             exit(0)
 
         # Define cell maps to track exploration
         self.openList = []  # List of coordinates to be explored, in the form: [(y, x), cost, action]
-        self.openGrid = np.zeros_like(self.map.image, dtype=np.uint8)  # Grid of cells pending exploration
-        self.closeGrid = np.zeros_like(self.map.image, dtype=np.uint8)  # Grid of explored cells
-        self.actionGrid = np.zeros_like(self.map.image, dtype=np.uint8) + 255  # Grid containing movement policy
-        self.backTrack = cv2.cvtColor(np.copy(self.map.image), cv2.COLOR_GRAY2RGB)  # Image of the optimal path
+        self.openGrid = np.zeros_like(self.map.baseImage, dtype=np.uint8)  # Grid of cells pending exploration
+        self.closeGrid = np.zeros_like(self.map.baseImage, dtype=np.uint8)  # Grid of explored cells
+        self.actionGrid = np.zeros_like(self.map.baseImage, dtype=np.uint8) + 255  # Grid containing movement policy
+        self.backTrack = cv2.cvtColor(np.copy(self.map.baseImage)*255, cv2.COLOR_GRAY2RGB)  # Image of the optimal path
         self.solve()
 
     def solve(self):
+        """
+        Solves the puzzle
+        """
         # Initialize the open list/grid with the start cell
         self.openList = [[self.start, 0, 255]]  # [point, cost, action]
         self.openGrid[self.start] = 1
@@ -79,7 +89,7 @@ class PointRobot:
                     # Check for map boundaries
                     if 0 <= next_cell[0] < self.map.height and 0 <= next_cell[1] < self.map.width:
                         # Check for obstacles
-                        if not self.map.image[next_cell[0], next_cell[1]]:
+                        if not self.map.obstacleSpace[next_cell[0], next_cell[1]]:
                             # Check whether cell has been explored
                             if not self.closeGrid[next_cell[0], next_cell[1]]:
                                 # Check if cell is already pending exploration
@@ -98,18 +108,23 @@ class PointRobot:
             cv2.imshow("Maze", self.closeGrid * 255)
             cv2.waitKey(1)
         cv2.destroyWindow("Maze")
-
-        # Backtracking from the goal cell to extract an optimal path
         current_cell = self.goal
         next_action_index = self.actionGrid[current_cell]
-        while next_action_index != 255:
-            current_cell = (current_cell[0] - self.actions[next_action_index][0],
-                            current_cell[1] - self.actions[next_action_index][1])
-            self.backTrack[current_cell] = (255, 0, 0)
-            next_action_index = self.actionGrid[current_cell]
-        cv2.imshow("Goal", self.backTrack + cv2.cvtColor(self.map.image * 254, cv2.COLOR_GRAY2RGB))
-        cv2.waitKey(0)
-        cv2.destroyWindow("Goal")
+
+        # Check for failure to reach the goal cell
+        if next_action_index == 255:
+            sys.stdout.write("\nFailed to find a path to the goal!\n")
+
+        # Backtracking from the goal cell to extract an optimal path
+        else:
+            while next_action_index != 255:
+                current_cell = (current_cell[0] - self.actions[next_action_index][0],
+                                current_cell[1] - self.actions[next_action_index][1])
+                self.backTrack[current_cell] = (255, 0, 255)
+                next_action_index = self.actionGrid[current_cell]
+            cv2.imshow("Goal", self.backTrack)
+            cv2.waitKey(0)
+            cv2.destroyWindow("Goal")
 
 
 if __name__ == '__main__':
@@ -119,15 +134,17 @@ if __name__ == '__main__':
     parser.add_argument('initialY', type=int, help='Y-coordinate of Initial node of the robot')
     parser.add_argument('goalX', type=int, help='X-coordinate of Goal node of the robot')
     parser.add_argument('goalY', type=int, help='Y-coordinate of Goal node of the robot')
-    parser.add_argument('--radius', type=int, metavar="R", help='Indicates that the robot is rigid, with radius R')
-    parser.add_argument("--clearance", type=int, metavar="C",
-                        help="Indicates that the robot requires a clearance of at least C pixels")
+    parser.add_argument('-r', type=int, metavar="RADIUS", help='Indicates that the robot is rigid, with radius RADIUS')
+    parser.add_argument("-c", type=int, metavar="CLEARANCE",
+                        help="Indicates that the robot requires a clearance of at least CLEARANCE pixels")
     args = parser.parse_args()
 
     sx = args.initialX
     sy = args.initialY
     gx = args.goalX
     gy = args.goalY
+    r = args.r
+    c = args.c
     start_pos = (sx, sy)
     goal_pos = (gx, gy)
-    pointRobot = PointRobot(start_pos, goal_pos)
+    pointRobot = PointRobot(start_pos, goal_pos, radius=r, clearance=c)
