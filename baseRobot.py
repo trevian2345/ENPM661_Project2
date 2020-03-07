@@ -3,6 +3,7 @@ from math import *
 import numpy as np
 import cv2
 import sys
+from datetime import datetime
 
 
 class Robot:
@@ -81,7 +82,10 @@ class Robot:
         # Initialize the open list/grid with the start cell
         self.openList = [[self.start, 0, 255]]  # [point, cost, action]
         self.openGrid[self.start] = 1
-        sys.stdout.write("\nStarting path finder...")
+        sys.stdout.write("\nSearching for optimal path...\n")
+        explored_count = 0
+        free_count = int(np.sum(1 - self.map.obstacleSpace))
+        start_time = datetime.today()
         while len(self.openList) > 0:
             # Find index of minimum cost cell
             cost_list = [self.openList[i][1] for i in range(len(self.openList))]
@@ -92,7 +96,6 @@ class Robot:
 
             # See if goal cell has been reached
             if cell == self.goal:
-                sys.stdout.write("\nGoal reached!\n")
                 self.openList = []
 
             # Expand cell
@@ -118,18 +121,32 @@ class Robot:
             self.openGrid[cell] = 0
             self.closeGrid[cell] = 1
             self.actionGrid[cell] = action
+            explored_count += 1
+            sys.stdout.write("\r%d out of %d cells explored (%.1f %%)" %
+                             (explored_count, free_count, 100.0 * explored_count/free_count))
             cv2.imshow("Maze", self.closeGrid * 255)
             cv2.waitKey(1)
         cv2.destroyWindow("Maze")
         current_cell = self.goal
         next_action_index = self.actionGrid[current_cell]
 
+        # Output timing information
+        end_time = datetime.today()
+        duration = end_time - start_time
+        sys.stdout.write("\n\nStart time:  %s\nEnd time:  %s" % (start_time, end_time))
+        sys.stdout.write("\nRuntime:  ")
+        sys.stdout.write(("%d hr, " % (duration.seconds // 3600)) if duration.seconds >= 3600 else "")
+        sys.stdout.write(("%d min, " % ((duration.seconds // 60) % 3600))
+                         if (duration.seconds // 60) % 3600 >= 1 else "")
+        sys.stdout.write("%.3f sec" % ((duration.seconds % 60) + (duration.microseconds / 1000000.0)))
+
         # Check for failure to reach the goal cell
         if next_action_index == 255:
-            sys.stdout.write("\nFailed to find a path to the goal!\n")
+            sys.stdout.write("\n\nFailed to find a path to the goal!\n")
 
         # Backtracking from the goal cell to extract an optimal path
         else:
+            sys.stdout.write("\n\nGoal reached!\n")
             while next_action_index != 255:
                 current_cell = (current_cell[0] - self.actions[next_action_index][0],
                                 current_cell[1] - self.actions[next_action_index][1])
