@@ -31,8 +31,9 @@ class Robot:
                         [1, -1, sqrt(2)],
                         [1, 0, 1],
                         [1, 1, sqrt(2)]]
-        self.start = start  # Starting coordinates in tuple form
-        self.goal = goal  # Goal coordinates in tuple form
+        self.start = (199 - start[0], start[1])  # Starting coordinates in tuple form
+        self.goal = (199 - goal[0], goal[1])  # Goal coordinates in tuple form
+        self.success = False
 
         # Handle radius and clearance arguments
         self.rigid = rigid
@@ -73,7 +74,10 @@ class Robot:
         self.closeGrid = np.zeros_like(self.map.baseImage, dtype=np.uint8)  # Grid of explored cells
         self.actionGrid = np.zeros_like(self.map.baseImage, dtype=np.uint8) + 255  # Grid containing movement policy
         self.backTrack = cv2.cvtColor(np.copy(self.map.baseImage)*255, cv2.COLOR_GRAY2RGB)  # Image of the optimal path
+        self.pathImage = np.zeros_like(self.map.baseImage, dtype=np.uint8)  # Alternate image of optimal path
+        self.frames = []
         self.solve()
+        self.generate_video()
 
     def solve(self):
         """
@@ -112,21 +116,17 @@ class Robot:
                                 if not self.openGrid[next_cell[0], next_cell[1]]:
                                     self.openList.append([next_cell, cost + self.actions[a][2], a])
                                     self.openGrid[next_cell] = 1
-                                else:
-                                    # TODO:  Handle open cell being approached from two cells with same cumulative cost
-                                    pass
                 self.openList.pop(index)
 
             # Mark the cell as having been explored
             self.openGrid[cell] = 0
             self.closeGrid[cell] = 1
             self.actionGrid[cell] = action
+            if explored_count % 10 == 0:
+                self.frames.append(np.copy(self.closeGrid))
             explored_count += 1
             sys.stdout.write("\r%d out of %d cells explored (%.1f %%)" %
                              (explored_count, free_count, 100.0 * explored_count/free_count))
-            cv2.imshow("Maze", self.closeGrid * 255)
-            cv2.waitKey(1)
-        cv2.destroyWindow("Maze")
         current_cell = self.goal
         next_action_index = self.actionGrid[current_cell]
 
@@ -146,12 +146,62 @@ class Robot:
 
         # Backtracking from the goal cell to extract an optimal path
         else:
+            self.success = True
             sys.stdout.write("\n\nGoal reached!\n")
             while next_action_index != 255:
                 current_cell = (current_cell[0] - self.actions[next_action_index][0],
                                 current_cell[1] - self.actions[next_action_index][1])
                 self.backTrack[current_cell] = (255, 0, 255)
+                self.pathImage[current_cell] = 1
                 next_action_index = self.actionGrid[current_cell]
-            cv2.imshow("Goal", self.backTrack)
-            cv2.waitKey(0)
-            cv2.destroyWindow("Goal")
+
+    def generate_video(self):
+        """
+        Generates a video using H264 codec
+        """
+        sys.stdout.write("\nGenerating animation...\n")
+        writer = cv2.VideoWriter('FinalAnimation.mp4', cv2.VideoWriter_fourcc('H', '2', '6', '4'), 30,
+                                 (self.map.width, self.map.height))
+
+        # Add start frame to animation
+        base_frame = cv2.cvtColor(np.zeros_like(self.map.baseImage, dtype=np.uint8), cv2.COLOR_GRAY2RGB)
+        base_frame[:] = (192, 192, 192)
+        base_frame = base_frame + cv2.cvtColor(self.map.baseImage, cv2.COLOR_GRAY2RGB) * 150
+        first_frame = np.copy(base_frame)
+        self.draw_start_and_goal(first_frame)
+        for i in range(150):
+            writer.write(first_frame)
+
+        # Add exploration frames to animation
+        back_color = np.zeros_like(self.backTrack, dtype=np.uint8)
+        back_color[:] = (255, 192, 0)
+        explore_frame = np.copy(base_frame)
+        for frame in self.frames:
+            explore_frame = np.copy(base_frame)
+            explore_frame[np.where(frame)] = back_color[np.where(frame)]
+            writer.write(explore_frame)
+
+        # Add final frame to animation
+        path_frame = np.copy(explore_frame)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (self.radius * 2 + 1, self.radius * 2 + 1))
+        path_mask = cv2.dilate(np.copy(self.pathImage), kernel)
+        path_color = np.zeros_like(self.backTrack, dtype=np.uint8)
+        path_color[:] = (255, 64, 64)
+        path_frame[np.where(path_mask)] = path_color[np.where(path_mask)]
+        self.draw_start_and_goal(path_frame)
+        for i in range(60):
+            writer.write(explore_frame)
+        for i in range(180):
+            writer.write(path_frame if self.success else explore_frame)
+        writer.release()
+
+    def draw_start_and_goal(self, image):
+        # Draw robot
+        cv2.circle(image, (self.start[1], self.start[0]), self.radius + 3, (0, 0, 255), 1)
+        cv2.circle(image, (self.start[1], self.start[0]), self.radius, (0, 0, 255), -1)
+
+        # Draw goal
+        cv2.line(image, (self.goal[1] - 5, self.goal[0] - 5), (self.goal[1] + 5, self.goal[0] + 5),
+                 (0, 192, 0), 2)
+        cv2.line(image, (self.goal[1] - 5, self.goal[0] + 5), (self.goal[1] + 5, self.goal[0] - 5),
+                 (0, 192, 0), 2)
