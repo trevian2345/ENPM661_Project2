@@ -30,7 +30,7 @@ For Point Robot -
   The program, Dijkstra_point.py, is run by executing the command `python Dijkstra_point.py`
 
 For Rigid Robot - 
-  Similarly, Dijkstra_rigid.py is run by executing 'python Dijkstra_rigid.py'
+  Similarly, Dijkstra_rigid.py is run by executing `python Dijkstra_rigid.py`
 
 Additional files, baseRobot.py and obstacleMap.py are run when the above execution happens.
 baseRobot.py - It consists of a class from which an object created would have an instance of the main algorithms
