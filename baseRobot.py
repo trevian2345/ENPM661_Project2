@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 class Robot:
-    def __init__(self, start, goal, radius, clearance, rigid=False):
+    def __init__(self, start, goal, radius, clearance, rigid=False, play=False):
         """
         Initialization of the robot.
         :param start: starting coordinates for the robot, in tuple form (y, x)
@@ -34,6 +34,7 @@ class Robot:
         self.start = (199 - start[0], start[1])  # Starting coordinates in tuple form
         self.goal = (199 - goal[0], goal[1])  # Goal coordinates in tuple form
         self.success = False
+        self.play = play
 
         # Handle radius and clearance arguments
         self.rigid = rigid
@@ -122,7 +123,7 @@ class Robot:
             self.openGrid[cell] = 0
             self.closeGrid[cell] = 1
             self.actionGrid[cell] = action
-            if explored_count % 10 == 0:
+            if explored_count % 15 == 0:
                 self.frames.append(np.copy(self.closeGrid))
             explored_count += 1
             sys.stdout.write("\r%d out of %d cells explored (%.1f %%)" %
@@ -162,6 +163,7 @@ class Robot:
         sys.stdout.write("\nGenerating animation...\n")
         writer = cv2.VideoWriter('FinalAnimation.mp4', cv2.VideoWriter_fourcc('H', '2', '6', '4'), 30,
                                  (self.map.width, self.map.height))
+        window_name = "Animation"
 
         # Add start frame to animation
         base_frame = cv2.cvtColor(np.zeros_like(self.map.baseImage, dtype=np.uint8), cv2.COLOR_GRAY2RGB)
@@ -171,6 +173,9 @@ class Robot:
         self.draw_start_and_goal(first_frame)
         for i in range(150):
             writer.write(first_frame)
+        if self.play:
+            cv2.imshow(window_name, first_frame)
+            cv2.waitKey(5000)
 
         # Add exploration frames to animation
         back_color = np.zeros_like(self.backTrack, dtype=np.uint8)
@@ -180,6 +185,9 @@ class Robot:
             explore_frame = np.copy(base_frame)
             explore_frame[np.where(frame)] = back_color[np.where(frame)]
             writer.write(explore_frame)
+            if self.play:
+                cv2.imshow(window_name, explore_frame)
+                cv2.waitKey(15)
 
         # Add final frame to animation
         path_frame = np.copy(explore_frame)
@@ -191,8 +199,16 @@ class Robot:
         self.draw_start_and_goal(path_frame)
         for i in range(60):
             writer.write(explore_frame)
+        if self.play:
+            cv2.imshow(window_name, explore_frame)
+            cv2.waitKey(2000)
         for i in range(180):
             writer.write(path_frame if self.success else explore_frame)
+        if self.play:
+            cv2.imshow(window_name, path_frame if self.success else explore_frame)
+            cv2.waitKey(5000)
+        if self.play:
+            cv2.destroyWindow(window_name)
         writer.release()
 
     def draw_start_and_goal(self, image):

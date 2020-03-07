@@ -12,6 +12,7 @@ if __name__ == '__main__':
     parser.add_argument('radius', type=int, help='Indicates the radius of the rigid robot')
     parser.add_argument("clearance", type=int,
                         help="Indicates the minimum required clearance between the rigid robot and obstacles")
+    parser.add_argument('--play', action="store_true", help="Play using opencv's imshow")
     args = parser.parse_args()
 
     sx = args.initialX
@@ -20,6 +21,7 @@ if __name__ == '__main__':
     gy = args.goalY
     r = args.radius
     c = args.clearance
+    p = args.play
     start_pos = (sx, sy)
     goal_pos = (gx, gy)
-    rigidRobot = Robot(start_pos, goal_pos, r, c, rigid=True)
+    rigidRobot = Robot(start_pos, goal_pos, r, c, rigid=True, play=p)

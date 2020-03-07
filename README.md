@@ -50,11 +50,19 @@ Inaddition to the coordinates the rigid robot file takes radius and clearance.
 
 Help with using the program can be found by running the command `python solver.py --help`.
 
+NOTE:  This program outputs an mp4 file.
+If generating this mp4 file does not work, alternatively you can append the flag `--play` at the end
+of the command to use openCV's built-in imshow command.
+The mp4 file may still work even if there is an error message in the console related to FFmpeg.
+Preferably omit the `--play` flag if the mp4 file is playable.
+
 Some examples of valid commands:
 
         python Dijkstra_rigid.py 10 110 50 150 2 2 (arg : Ix Iy Gx Gy R C)
 
         python Dijkstra_point.py 160 10 10 290
+
+        python Dijkstra_point.py 40 20 175 275 --play
 --------------------------------------
 
 
