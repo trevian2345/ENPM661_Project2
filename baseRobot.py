@@ -143,7 +143,10 @@ class Robot:
 
         # Check for failure to reach the goal cell
         if next_action_index == 255:
-            sys.stdout.write("\n\nFailed to find a path to the goal!\n")
+            if self.start != self.goal:
+                sys.stdout.write("\n\nFailed to find a path to the goal!\n")
+            else:
+                sys.stdout.write("\n\nNo path generated.  Robot starts at goal space.\n")
 
         # Backtracking from the goal cell to extract an optimal path
         else:
