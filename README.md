@@ -60,7 +60,7 @@ Some examples of valid commands:
 
 ### Output
 
-While the Di is running, it will output the vizualization of the cells being explored.
+While the program is running, it will output the vizualization of the cells being explored.
 Once a solution has been found, the program outputs the cells explored.
 The program also outputs an optimal sequence of actions to get
 from the initial to the goal point.
